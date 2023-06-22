@@ -1,28 +1,13 @@
-import os
-import dotenv
 import fastapi
 import requests
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import json
 
-dotenv.load_dotenv()
 
-BHT_URL = os.getenv("BHT_URL")
-app = FastAPI()
-
-origins = [
-    "http://localhost",
-    "http://localhost:8080",
-    "http://markmolenmaker.github.io",
-    "https://markmolenmaker.github.io"
-    ]
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"], allow_credentials=True)
-
-
-def get_bht_bonus_list(statistic_url):
+def get_bht_bonus_list(statistic):
     # Get the HTML from the request
-    url = f"{BHT_URL}{statistic_url}"
+    url = f"{bht_url}/{statistic}/{bht_endpoints[statistic]}"
     response = requests.request("GET", url, headers={}, data={})
     html = response.text
 
@@ -48,9 +33,9 @@ def get_bht_bonus_list(statistic_url):
     return bonus_list
 
 
-def get_bht_statistic(statistic_url):
+def get_bht_statistic(statistic):
     # Get the HTML from the request
-    url = f"{BHT_URL}{statistic_url}"
+    url = f"{bht_url}/{statistic}/{bht_endpoints[statistic]}"
     response = requests.request("GET", url, headers={}, data={})
     html = response.text
 
@@ -63,10 +48,36 @@ def get_bht_statistic(statistic_url):
 
     return None
 
-
-BHT_DIFFERENTLY_FORMATTED = {
+bht_url = "https://bht.bet/widgets"
+bht_endpoints = {
+    "amount_won": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
+    "hunt_average_betsize": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
+    "average_cost_per_bonus": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
+    "average_current_multi": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
+    "average_required_multi": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
+    "bonus_list": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
+    "bonus_count": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
+    "bonus_remaining_count": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
+    "cumulative_multi": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
+    "current_average_money": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
+    "current_average_required_money": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
+    "profit_loss": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
+    "rolling_required_average_to_be": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
+    "start_cost": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo"
+}
+bht_specifics = {
     "bonus_list": get_bht_bonus_list
 }
+
+app = FastAPI()
+
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+    "http://markmolenmaker.github.io",
+    "https://markmolenmaker.github.io"
+    ]
+app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"], allow_credentials=True)
 
 
 @app.get("/")
@@ -76,15 +87,14 @@ async def root():
 
 @app.get("/statistic/{statistic}")
 async def get_statistic(statistic: str):
-    statistic_url = os.getenv(statistic.capitalize())
-    if statistic_url is None:
+    if statistic not in bht_endpoints.keys():
         raise HTTPException(status_code=404, detail=f"No endpoint for: {statistic}, was found!")
 
     # Intercept if statistic is special
-    if statistic in BHT_DIFFERENTLY_FORMATTED.keys():
-        value = BHT_DIFFERENTLY_FORMATTED[statistic](statistic_url)
+    if statistic in bht_specifics.keys():
+        value = bht_specifics[statistic](statistic)
     else:
-        value = get_bht_statistic(statistic_url)
+        value = get_bht_statistic(statistic)
 
     if value is None:
         raise HTTPException(status_code=400, detail="Could not extract a value from the HTML.")
