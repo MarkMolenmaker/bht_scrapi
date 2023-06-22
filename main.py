@@ -5,22 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import json
 
 bht_url = "https://bht.bet/widgets"
-bht_endpoints = {
-    "amount_won": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
-    "hunt_average_betsize": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
-    "average_cost_per_bonus": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
-    "average_current_multi": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
-    "average_required_multi": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
-    "bonus_list": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
-    "bonus_count": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
-    "bonus_remaining_count": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
-    "cumulative_multi": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
-    "current_average_money": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
-    "current_average_required_money": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
-    "profit_loss": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
-    "rolling_required_average_to_be": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo",
-    "start_cost": "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo"
-}
+bht_token = "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo"
 
 app = FastAPI()
 
@@ -30,8 +15,11 @@ app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], a
 
 def get_bht_statistic(statistic):
     # Get the JSON from the request
-    url = f"{bht_url}/{statistic}/{bht_endpoints[statistic]}"
+    url = f"{bht_url}/{statistic}/{bht_token}"
     response = requests.request("GET", url, headers={'x-requested-with': 'XMLHttpRequest'}, data={})
+
+    if response.status_code != 200:
+        return None
     return response.json()
 
 
@@ -42,9 +30,6 @@ async def root():
 
 @app.get("/statistic/{statistic}")
 async def get_statistic(statistic: str):
-    if statistic not in bht_endpoints.keys():
-        raise HTTPException(status_code=404, detail=f"No endpoint for: {statistic}, was found!")
-
     bht_widget_content = get_bht_statistic(statistic)
 
     if bht_widget_content is None:
