@@ -1,3 +1,4 @@
+import argparse
 import fastapi
 import requests
 from fastapi import FastAPI, HTTPException
@@ -5,7 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 import json
 
 bht_url = "https://bht.bet/widgets"
-bht_token = "9UTk18nl4UwzSYz4alwIHSUlNLsFfwQo"
+
+# Get bht_token from command arguments parser
+parser = argparse.ArgumentParser()
+parser.add_argument("--bht-token", help="The BHT token to use for the request.", required=True)
+args = parser.parse_args()
+
+bht_token = args["bht-token"]
 
 app = FastAPI()
 
