@@ -25,6 +25,32 @@ prefix_pattern = re.compile(r'\[(.*)]')
 suffix_pattern = re.compile(r'\((.*)\)')
 
 
+def float_value_from_money_string(money):
+    return float((money[2:]).replace(',', ''))
+
+
+def format_money_from_float_value(value):
+    if value >= 100:
+        formatted_value = f'{value:,.0f}'
+    else:
+        formatted_value = f'{value:.2f}'
+    return f'$ {formatted_value}'
+
+
+def float_value_from_multiplier_string(multiplier):
+    return float(multiplier.replace('x', '').replace(',', '').strip())
+
+
+def format_multiplier_from_float_value(value):
+    if value >= 1000:
+        formatted_value = f'{value:,.0f}'
+    elif value >= 10:
+        formatted_value = f'{value:.0f}'
+    else:
+        formatted_value = f'{value:.1f}'
+    return f'{formatted_value} X'
+
+
 def get_bht_statistic(statistic):
     # Get the JSON from the request
     url = f"{bht_url}/{statistic}/{bht_token}"
@@ -33,14 +59,62 @@ def get_bht_statistic(statistic):
         return None
     json_data = response.json()
 
-    # Get the HTML from the bonus_list widget, for the BEFORE and AFTER values
+    # Loop over all the bonuses
     if statistic == 'bonus_list':
+        payout_bonus_count = 0
+        for idx in range(len(json_data['bonuses'])):
+
+            # Multi calculation and formatting
+            json_data['bonuses'][idx]['multiplier_value'] = None
+            json_data['bonuses'][idx]['multiplier'] = None
+
+            if json_data['bonuses'][idx]['payout'] is not None and json_data['bonuses'][idx]['bet_size'] is not None:
+                multi = float((json_data['bonuses'][idx]['payout'][2:]).replace(',', '')) / float((json_data['bonuses'][idx]['bet_size'][2:]).replace(',', ''))
+
+                json_data['bonuses'][idx]['multiplier_value'] = multi
+                json_data['bonuses'][idx]['multiplier'] = format_multiplier_from_float_value(multi)
+
+            # Count the number of bonuses with a payout
+            if json_data['bonuses'][idx]['payout'] is not None:
+                payout_bonus_count += 1
+
+        # Bonus progress calculation and formatting
+        json_data['bonus_progress_value'] = 0
+        if payout_bonus_count > 0:
+            bonus_progress = float(payout_bonus_count) / float(len(json_data['bonuses'])) * 100
+            json_data['bonus_progress_value'] = f'{bonus_progress:.0f}'
+
+            # Other Money formatting
+            json_data['info_start_cost'] = format_money_from_float_value(
+                float_value_from_money_string(json_data['info_start_cost']))
+            json_data['info_amount_won'] = format_money_from_float_value(
+                float_value_from_money_string(json_data['info_amount_won']))
+            json_data['highest_payout_value'] = format_money_from_float_value(
+                float_value_from_money_string(json_data['highest_payout_value']))
+            json_data['highest_payout_betsize'] = format_money_from_float_value(
+                float_value_from_money_string(json_data['highest_payout_betsize']))
+            json_data['highest_multi_betsize'] = format_money_from_float_value(
+                float_value_from_money_string(json_data['highest_multi_betsize']))
+
+            # Other Multiplier formatting
+            json_data['info_required_average'] = format_multiplier_from_float_value(
+                float_value_from_multiplier_string(json_data['info_required_average']))
+            json_data['info_running_average'] = format_multiplier_from_float_value(
+                float_value_from_multiplier_string(json_data['info_running_average']))
+            json_data['highest_multi_value'] = format_multiplier_from_float_value(
+                float_value_from_multiplier_string(json_data['highest_multi_value']))
+
+
+        # PART 2
+        # Get the HTML from the bonus_list widget, for the BEFORE and AFTER values
         html = requests.request("GET", url, headers={}, data={})
         if html.status_code != 200:
             return json_data
 
         lines = html.text.splitlines()
         for index in range(len(lines)):
+
+            # Prefix and Suffix parsing
             if 'class="slot" data-bonusid' in lines[index]:
 
                 bonus_id, prefix, suffix = None, None, None
@@ -58,10 +132,10 @@ def get_bht_statistic(statistic):
                 if match:
                     suffix = match.group(1)
 
-                for idx in range(len(json_data['bonuses'])):
-                    if str(json_data['bonuses'][idx]['id']) == bonus_id:
-                        json_data['bonuses'][idx]['prefix'] = prefix
-                        json_data['bonuses'][idx]['suffix'] = suffix
+                for idy in range(len(json_data['bonuses'])):
+                    if str(json_data['bonuses'][idy]['id']) == bonus_id:
+                        json_data['bonuses'][idy]['prefix'] = prefix
+                        json_data['bonuses'][idy]['suffix'] = suffix
 
     return json_data
 
