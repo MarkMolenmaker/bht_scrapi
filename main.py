@@ -17,7 +17,7 @@ bht_token = os.environ.get("BHT_TOKEN")
 
 app = FastAPI()
 
-origins = ["http://localhost", "http://localhost:8080", "http://markmolenmaker.github.io", "https://markmolenmaker.github.io" ]
+origins = ["*"]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"], allow_credentials=True)
 
 bonus_id_pattern = re.compile(r'\"(\d+)\"')
